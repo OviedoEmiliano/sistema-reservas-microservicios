@@ -1,0 +1,30 @@
+name: usuario-service CI
+
+on:
+  push:
+    paths:
+      - 'backend/usuario-service/**'
+      - '.github/workflows/usuario-service-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/usuario-service/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/usuario-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Compilar y correr tests
+        run: mvn -B verify

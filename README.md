@@ -1,5 +1,7 @@
 # Sistema de Reservas — Arquitectura de Microservicios
 
+![usuario-service CI](https://github.com/OviedoEmiliano/sistema-reservas-microservicios/actions/workflows/usuario-service-ci.yml/badge.svg)
+
 Proyecto backend de práctica orientado a portfolio, construido con Spring Boot y arquitectura de microservicios. El objetivo es implementar un sistema de gestión de usuarios y turnos/reservas, con un API Gateway como punto de entrada único.
 
 ## Estado del proyecto
@@ -8,10 +10,12 @@ Proyecto backend de práctica orientado a portfolio, construido con Spring Boot 
 
 | Servicio | Estado | Descripción |
 |---|---|---|
-| `usuario-service` | ✅ CRUD completo | Alta, baja, consulta (individual y paginada) y actualización (total/parcial) de usuarios |
+| [`usuario-service`](backend/usuario-service/README.md) | ✅ CRUD completo, con tests unitarios y CI | Alta, baja, consulta (individual y paginada) y actualización (total/parcial) de usuarios |
 | `turno-service` | 🚧 En desarrollo | Lógica core de turnos/reservas — próximo paso |
 | `api-gateway` | 🚧 Scaffolding inicial | Punto de entrada único, ruteo hacia los microservicios |
 | `frontend` (React) | ⏳ Pendiente | Se desarrollará una vez completo el backend |
+
+> ⚠️ **Seguridad pendiente:** por ahora las contraseñas de `usuario-service` se guardan en texto plano. La encriptación (BCrypt) y la autenticación con JWT se resolverán junto con el API Gateway. No usar con datos reales.
 
 ## Arquitectura
 
@@ -30,17 +34,20 @@ Cada microservicio tiene su propia base de datos PostgreSQL, siguiendo el patró
 - **Lombok** — reducción de boilerplate
 - **Bean Validation** (`spring-boot-starter-validation`)
 - Manejo global de excepciones con `@RestControllerAdvice`
+- **Testing:** JUnit 5, Mockito, AssertJ (Testcontainers previsto para integración)
+- **CI:** GitHub Actions
 - **Maven** como gestor de dependencias y build
 
 ## Estructura del repositorio
 
 ```
 Reservas/
+├── .github/workflows/     # CI con GitHub Actions
 ├── backend/
 │   ├── usuario-service/
 │   ├── turno-service/
 │   └── api-gateway/
-├── frontend/          (próximamente)
+├── frontend/              (próximamente)
 └── README.md
 ```
 
@@ -73,6 +80,13 @@ cd backend/usuario-service
 
 `usuario-service` corre en el puerto `8081`.
 
+### Correr los tests
+
+```bash
+cd backend/usuario-service
+./mvnw test
+```
+
 ## Endpoints disponibles (usuario-service)
 
 | Método | Endpoint | Descripción |
@@ -84,9 +98,13 @@ cd backend/usuario-service
 | `PATCH` | `/api/usuarios/{id}` | Actualización parcial |
 | `DELETE` | `/api/usuarios/{id}` | Eliminar un usuario |
 
+Detalle completo (DTOs, validaciones, errores) en el [README de `usuario-service`](backend/usuario-service/README.md).
+
 ## Próximos pasos
 
-- [ ] Tests unitarios (JUnit + Mockito) y de integración (`@SpringBootTest` + `MockMvc`)
+- [x] Tests unitarios de `usuario-service` (JUnit + Mockito)
+- [x] Integración continua con GitHub Actions
+- [ ] Tests de integración (`@SpringBootTest` + `MockMvc` + Testcontainers)
 - [ ] Encriptación de contraseñas con BCrypt
 - [ ] Desarrollo completo de `turno-service`
 - [ ] Configuración del `api-gateway` con ruteo hacia ambos servicios
@@ -95,4 +113,4 @@ cd backend/usuario-service
 
 ## Autor
 
-Emiliano Oviedo 
+Emiliano Oviedo

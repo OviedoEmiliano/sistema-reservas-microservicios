@@ -1,10 +1,12 @@
 # usuario-service
 
+![usuario-service CI](https://github.com/OviedoEmiliano/sistema-reservas-microservicios/actions/workflows/usuario-service-ci.yml/badge.svg)
+
 Microservicio de gestión de usuarios del sistema de Reservas. Implementa el CRUD completo sobre la entidad `Usuario`, con validaciones, mapeo DTO ↔ Entidad vía MapStruct, y manejo global de excepciones.
 
 ## Estado
 
-✅ CRUD completo y probado (creación, consulta individual, listado paginado, actualización total/parcial, eliminación).
+✅ CRUD completo, con tests unitarios del service (JUnit 5 + Mockito) y CI con GitHub Actions.
 
 ⚠️ **Pendiente:** las contraseñas se persisten actualmente **en texto plano**. La encriptación con BCrypt (`PasswordEncoder`) está identificada y planificada, pero se decidió posponerla porque la seguridad del sistema completo se va a manejar a través de un API Gateway con JWT — el diseño final de autenticación se resolverá en conjunto con esa capa antes de cerrar este punto. No usar este servicio con datos reales hasta resolverlo.
 
@@ -16,6 +18,8 @@ Microservicio de gestión de usuarios del sistema de Reservas. Implementa el CRU
 - Lombok
 - Bean Validation (`jakarta.validation`)
 - `@RestControllerAdvice` para manejo centralizado de excepciones
+- Testing: JUnit 5, Mockito, AssertJ (Testcontainers previsto para integración)
+- CI: GitHub Actions
 
 ## Configuración
 
@@ -40,6 +44,17 @@ cd backend/usuario-service
 ./mvnw spring-boot:run
 ```
 
+## Tests
+
+```bash
+cd backend/usuario-service
+./mvnw test
+```
+
+- **Unitarios** (`UsuarioServiceTest`): prueban la lógica de negocio de `UsuarioService` de forma aislada, con el repository y el mapper mockeados (Mockito). No requieren base de datos.
+- **Integración**: previstos con Testcontainers (PostgreSQL real en contenedor) y MockMvc. Se ejecutarán en CI (GitHub Actions), que dispone de Docker.
+- **CI**: cada push que modifica este servicio compila y ejecuta los tests en GitHub Actions (`.github/workflows/usuario-service-ci.yml`).
+
 ## Modelo de datos
 
 ### Entidad `Usuario`
@@ -53,6 +68,8 @@ cd backend/usuario-service
 | `password` | `String` | requerido *(⚠️ texto plano por ahora)* |
 | `nroCelular` | `String` | requerido, máx. 20 |
 | `rol` | `Rol` (enum) | `ROLE_CLIENTE` por defecto |
+| `fechaCreacion` | `LocalDateTime` | autogenerado, no actualizable |
+| `fechaActualizacion` | `LocalDateTime` | autogenerado |
 
 ### Enum `Rol`
 
@@ -119,10 +136,13 @@ Manejado centralizadamente en `GlobalExceptionHandler` vía `@RestControllerAdvi
 - **DTOs separados por operación** (`UsuarioRequestDTO`, `UsuarioResponseDTO`, `UsuarioUpdateDTO`, `UsuarioPatchDTO`): evita exponer campos sensibles (password) y permite reglas de validación distintas según el contexto (por ejemplo, el email no es editable vía `PUT`/`PATCH`).
 - **PUT vs. PATCH diferenciados semánticamente**: `PUT` exige todos los campos editables; `PATCH` acepta actualización parcial, ignorando campos nulos en el mapeo (`@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)` en MapStruct).
 - **MapStruct sobre mapeo manual**: generación de mappers en tiempo de compilación, sin costo de reflection en runtime.
+- **Excepciones de dominio + `@RestControllerAdvice`**: la capa de servicio expresa errores de negocio y el handler global los traduce a códigos HTTP, sin `try/catch` en los controllers.
+- **Rol como enum persistido como `STRING`**: evita la corrupción de datos si se reordena el enum.
 
 ## Próximos pasos para este servicio
 
 - [ ] Encriptar `password` con BCrypt (`PasswordEncoder`), en conjunto con el diseño de autenticación vía API Gateway + JWT
-- [ ] Tests unitarios del `UsuarioService` (Mockito)
-- [ ] Tests de integración del controller (`@SpringBootTest` + `MockMvc`)
+- [x] Tests unitarios del `UsuarioService` (Mockito)
+- [x] Integración continua con GitHub Actions
+- [ ] Tests de integración del controller (`@SpringBootTest` + MockMvc + Testcontainers)
 - [ ] Documentación interactiva con springdoc-openapi (Swagger)

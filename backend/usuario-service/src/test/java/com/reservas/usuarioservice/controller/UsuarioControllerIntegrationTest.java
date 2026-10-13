@@ -12,7 +12,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import com.reservas.usuarioservice.model.entity.Usuario;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -95,5 +97,45 @@ class UsuarioControllerIntegrationTest {
                 .andExpect(status().isBadRequest());
 
         assertThat(usuarioRepository.count()).isZero();
+    }
+    private Usuario guardarUsuario() {
+        Usuario usuario = new Usuario();
+        usuario.setNombre("Juan");
+        usuario.setApellido("Perez");
+        usuario.setEmail("juan.perez@test.com");
+        usuario.setPassword("password123");
+        usuario.setNroCelular("1122334455");
+        return usuarioRepository.save(usuario);
+    }
+
+    @Test
+    void patchUsuario_soloActualizaLosCamposEnviados() throws Exception {
+        Usuario guardado = guardarUsuario();
+
+        mockMvc.perform(patch("/api/usuarios/{id}", guardado.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            { "nroCelular": "1155667788" }
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nroCelular").value("1155667788"))
+                .andExpect(jsonPath("$.nombre").value("Juan"))
+                .andExpect(jsonPath("$.apellido").value("Perez"));
+
+        Usuario enBase = usuarioRepository.findById(guardado.getId()).orElseThrow();
+        assertThat(enBase.getNroCelular()).isEqualTo("1155667788");
+        assertThat(enBase.getNombre()).isEqualTo("Juan");
+        assertThat(enBase.getApellido()).isEqualTo("Perez");
+        assertThat(enBase.getEmail()).isEqualTo("juan.perez@test.com");
+    }
+
+    @Test
+    void patchUsuario_conIdInexistente_devuelve404() throws Exception {
+        mockMvc.perform(patch("/api/usuarios/{id}", 99999)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            { "nroCelular": "1155667788" }
+                            """))
+                .andExpect(status().isNotFound());
     }
 }

@@ -14,6 +14,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import com.reservas.usuarioservice.model.entity.Usuario;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,6 +47,19 @@ class UsuarioControllerIntegrationTest {
             }
             """;
 
+    private Usuario guardarUsuario() {
+        return guardarUsuario("juan.perez@test.com");
+    }
+
+    private Usuario guardarUsuario(String email) {
+        Usuario usuario = new Usuario();
+        usuario.setNombre("Juan");
+        usuario.setApellido("Perez");
+        usuario.setEmail(email);
+        usuario.setPassword("password123");
+        usuario.setNroCelular("1122334455");
+        return usuarioRepository.save(usuario);
+    }
     @BeforeEach
     void limpiarBase() {
         usuarioRepository.deleteAll();
@@ -98,15 +114,6 @@ class UsuarioControllerIntegrationTest {
 
         assertThat(usuarioRepository.count()).isZero();
     }
-    private Usuario guardarUsuario() {
-        Usuario usuario = new Usuario();
-        usuario.setNombre("Juan");
-        usuario.setApellido("Perez");
-        usuario.setEmail("juan.perez@test.com");
-        usuario.setPassword("password123");
-        usuario.setNroCelular("1122334455");
-        return usuarioRepository.save(usuario);
-    }
 
     @Test
     void patchUsuario_soloActualizaLosCamposEnviados() throws Exception {
@@ -137,5 +144,90 @@ class UsuarioControllerIntegrationTest {
                             { "nroCelular": "1155667788" }
                             """))
                 .andExpect(status().isNotFound());
+    }
+    @Test
+    void obtenerUsuario_conIdExistente_devuelve200() throws Exception {
+        Usuario guardado = guardarUsuario();
+
+        mockMvc.perform(get("/api/usuarios/{id}", guardado.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(guardado.getId()))
+                .andExpect(jsonPath("$.email").value("juan.perez@test.com"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    @Test
+    void obtenerUsuario_conIdInexistente_devuelve404() throws Exception {
+        mockMvc.perform(get("/api/usuarios/{id}", 99999))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void actualizarUsuario_conDatosValidos_reemplazaLosCampos() throws Exception {
+        Usuario guardado = guardarUsuario();
+
+        mockMvc.perform(put("/api/usuarios/{id}", guardado.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "nombre": "Juan Carlos",
+                              "apellido": "Perez Gomez",
+                              "nroCelular": "1199887766"
+                            }
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Juan Carlos"));
+
+        Usuario enBase = usuarioRepository.findById(guardado.getId()).orElseThrow();
+        assertThat(enBase.getNombre()).isEqualTo("Juan Carlos");
+        assertThat(enBase.getApellido()).isEqualTo("Perez Gomez");
+        assertThat(enBase.getNroCelular()).isEqualTo("1199887766");
+        assertThat(enBase.getEmail()).isEqualTo("juan.perez@test.com");
+    }
+
+    @Test
+    void actualizarUsuario_conNombreVacio_devuelve400() throws Exception {
+        Usuario guardado = guardarUsuario();
+
+        mockMvc.perform(put("/api/usuarios/{id}", guardado.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "nombre": "",
+                              "apellido": "Perez",
+                              "nroCelular": "1122334455"
+                            }
+                            """))
+                .andExpect(status().isBadRequest());
+
+        Usuario enBase = usuarioRepository.findById(guardado.getId()).orElseThrow();
+        assertThat(enBase.getNombre()).isEqualTo("Juan");
+    }
+
+    @Test
+    void eliminarUsuario_conIdExistente_devuelve204YLoBorra() throws Exception {
+        Usuario guardado = guardarUsuario();
+
+        mockMvc.perform(delete("/api/usuarios/{id}", guardado.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(usuarioRepository.existsById(guardado.getId())).isFalse();
+    }
+
+    @Test
+    void eliminarUsuario_conIdInexistente_devuelve404() throws Exception {
+        mockMvc.perform(delete("/api/usuarios/{id}", 99999))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void listarUsuarios_respetaElTamanioDePagina() throws Exception {
+        guardarUsuario("a@test.com");
+        guardarUsuario("b@test.com");
+        guardarUsuario("c@test.com");
+
+        mockMvc.perform(get("/api/usuarios").param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2));
     }
 }

@@ -9,9 +9,11 @@ import lombok.Setter;
 @Setter
 public class UsuarioPatchDTO {
 
+    @Pattern(regexp = ".*\\S.*", message = "El nombre no puede estar vacío")
     @Size(max = 50)
     private String nombre;
 
+    @Pattern(regexp = ".*\\S.*", message = "El apellido no puede estar vacío")
     @Size(max = 50)
     private String apellido;
 

@@ -8,12 +8,12 @@ import com.reservas.usuarioservice.model.dto.UsuarioUpdateDTO;
 import com.reservas.usuarioservice.model.entity.Usuario;
 import com.reservas.usuarioservice.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Locale;
-
 
 @Service
 @RequiredArgsConstructor
@@ -22,13 +22,19 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
 
+
     @Transactional
     public Usuario registrarUsuario(Usuario usuario) {
         usuario.setEmail(normalizarEmail(usuario.getEmail()));
         if (usuarioRepository.existsByEmail(usuario.getEmail())) {
             throw new EmailYaRegistradoException(usuario.getEmail());
         }
-        return usuarioRepository.save(usuario);
+        try {
+            return usuarioRepository.save(usuario);
+        } catch (DataIntegrityViolationException ex) {
+            // Otra request insertó el mismo email entre el exists y el save
+            throw new EmailYaRegistradoException(usuario.getEmail());
+        }
     }
 
     @Transactional(readOnly = true)

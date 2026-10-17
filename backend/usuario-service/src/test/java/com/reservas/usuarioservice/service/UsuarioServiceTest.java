@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -171,5 +172,16 @@ class UsuarioServiceTest {
                 .isInstanceOf(EmailYaRegistradoException.class);
 
         verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void registrarUsuario_siLaBdRechazaElEmailPorConcurrencia_lanzaEmailYaRegistrado() {
+        when(usuarioRepository.existsByEmail(usuario.getEmail())).thenReturn(false);
+        when(usuarioRepository.save(usuario))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        assertThatThrownBy(() -> usuarioService.registrarUsuario(usuario))
+                .isInstanceOf(EmailYaRegistradoException.class)
+                .hasMessageContaining(usuario.getEmail());
     }
 }

@@ -12,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Locale;
+
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class UsuarioService {
 
     @Transactional
     public Usuario registrarUsuario(Usuario usuario) {
+        usuario.setEmail(normalizarEmail(usuario.getEmail()));
         if (usuarioRepository.existsByEmail(usuario.getEmail())) {
             throw new EmailYaRegistradoException(usuario.getEmail());
         }
@@ -58,6 +61,11 @@ public class UsuarioService {
             throw new UsuarioNoEncontradoException(id);
         }
         usuarioRepository.deleteById(id);
+    }
+
+
+    private String normalizarEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
     private Usuario obtenerUsuarioOrThrow(Long id) {

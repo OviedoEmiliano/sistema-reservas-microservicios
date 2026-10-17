@@ -230,4 +230,23 @@ class UsuarioControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2));
     }
+    @Test
+    void crearUsuario_conEmailEnMayusculas_loGuardaEnMinusculasYDetectaDuplicado() throws Exception {
+        mockMvc.perform(post("/api/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            { "nombre": "Juan", "apellido": "Perez",
+                              "email": "Juan.Perez@Test.com", "password": "password123",
+                              "nroCelular": "1122334455" }
+                            """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("juan.perez@test.com"));
+
+        mockMvc.perform(post("/api/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(USUARIO_VALIDO))
+                .andExpect(status().isConflict());
+
+        assertThat(usuarioRepository.count()).isEqualTo(1);
+    }
 }

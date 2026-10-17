@@ -11,6 +11,7 @@ import com.reservas.usuarioservice.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -146,5 +147,29 @@ class UsuarioServiceTest {
                 .isInstanceOf(UsuarioNoEncontradoException.class);
 
         verify(usuarioRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void registrarUsuario_normalizaElEmailAntesDeGuardar() {
+        usuario.setEmail("  Juan.Perez@Test.COM ");
+        when(usuarioRepository.existsByEmail("juan.perez@test.com")).thenReturn(false);
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        usuarioService.registrarUsuario(usuario);
+
+        ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(captor.capture());
+        assertThat(captor.getValue().getEmail()).isEqualTo("juan.perez@test.com");
+    }
+
+    @Test
+    void registrarUsuario_conEmailDuplicadoEnOtroCase_lanzaExcepcion() {
+        usuario.setEmail("JUAN.PEREZ@TEST.COM");
+        when(usuarioRepository.existsByEmail("juan.perez@test.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> usuarioService.registrarUsuario(usuario))
+                .isInstanceOf(EmailYaRegistradoException.class);
+
+        verify(usuarioRepository, never()).save(any());
     }
 }

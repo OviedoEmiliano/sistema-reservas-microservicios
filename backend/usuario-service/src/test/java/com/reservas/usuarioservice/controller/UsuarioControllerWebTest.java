@@ -15,6 +15,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -130,5 +132,45 @@ class UsuarioControllerWebTest {
                 .andExpect(jsonPath("$.title").value("Error interno"))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("secreto"))));
+    }
+    @Test
+    void patchUsuario_conNombreVacio_devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/usuarios/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"nombre\": \"\" }"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.nombre").isArray());
+
+        verifyNoInteractions(usuarioService);
+    }
+
+    @Test
+    void patchUsuario_conApellidoSoloEspacios_devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/usuarios/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"apellido\": \"   \" }"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.apellido").isArray());
+
+        verifyNoInteractions(usuarioService);
+    }
+
+    @Test
+    void patchUsuario_conCelularInvalido_devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/usuarios/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"nroCelular\": \"abc\" }"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.nroCelular").isArray());
+
+        verifyNoInteractions(usuarioService);
+    }
+
+    @Test
+    void patchUsuario_soloConCelularValido_noFallaLaValidacion() throws Exception {
+        mockMvc.perform(patch("/api/usuarios/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"nroCelular\": \"1155667788\" }"))
+                .andExpect(status().isOk());
     }
 }

@@ -173,4 +173,16 @@ class UsuarioControllerWebTest {
                         .content("{ \"nroCelular\": \"1155667788\" }"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void crearUsuario_conPasswordDeMasDe72Caracteres_devuelve400() throws Exception {
+        String larga = "a".repeat(73);
+        mockMvc.perform(post("/api/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"nombre\": \"Juan\", \"apellido\": \"Perez\", "
+                                + "\"email\": \"juan@test.com\", \"password\": \"" + larga + "\", "
+                                + "\"nroCelular\": \"1122334455\" }"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.password").isArray());
+    }
 }

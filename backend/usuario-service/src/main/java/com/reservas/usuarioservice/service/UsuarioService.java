@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Locale;
@@ -21,7 +22,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
-
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public Usuario registrarUsuario(Usuario usuario) {
@@ -29,10 +30,10 @@ public class UsuarioService {
         if (usuarioRepository.existsByEmail(usuario.getEmail())) {
             throw new EmailYaRegistradoException(usuario.getEmail());
         }
+        usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
         try {
             return usuarioRepository.save(usuario);
         } catch (DataIntegrityViolationException ex) {
-            // Otra request insertó el mismo email entre el exists y el save
             throw new EmailYaRegistradoException(usuario.getEmail());
         }
     }

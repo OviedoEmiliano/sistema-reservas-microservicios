@@ -1,9 +1,12 @@
 package com.reservas.usuarioservice.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.nio.charset.StandardCharsets;
 
 @Getter
 @Setter
@@ -29,4 +32,10 @@ public class UsuarioRequestDTO {
     @NotBlank(message = "El número de celular es obligatorio")
     @Pattern(regexp = "\\d{8,15}", message = "El número de celular debe contener solo dígitos")
     private String nroCelular;
+
+    @JsonIgnore
+    @AssertTrue(message = "La contraseña no puede superar los 72 bytes")
+    public boolean isPasswordDentroDelLimite() {
+        return password == null || password.getBytes(StandardCharsets.UTF_8).length <= 72;
+    }
 }

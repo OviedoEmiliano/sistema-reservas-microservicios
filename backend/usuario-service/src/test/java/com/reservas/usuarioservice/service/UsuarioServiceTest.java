@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -32,6 +33,9 @@ class UsuarioServiceTest {
 
     @Mock
     private UsuarioMapper usuarioMapper;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UsuarioService usuarioService;
@@ -183,5 +187,27 @@ class UsuarioServiceTest {
         assertThatThrownBy(() -> usuarioService.registrarUsuario(usuario))
                 .isInstanceOf(EmailYaRegistradoException.class)
                 .hasMessageContaining(usuario.getEmail());
+    }
+    @Test
+    void registrarUsuario_guardaElPasswordHasheado() {
+        when(usuarioRepository.existsByEmail(usuario.getEmail())).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("hash-simulado");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        usuarioService.registrarUsuario(usuario);
+
+        ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(captor.capture());
+        assertThat(captor.getValue().getPassword()).isEqualTo("hash-simulado");
+    }
+
+    @Test
+    void registrarUsuario_conEmailDuplicado_noGastaTiempoHasheando() {
+        when(usuarioRepository.existsByEmail(usuario.getEmail())).thenReturn(true);
+
+        assertThatThrownBy(() -> usuarioService.registrarUsuario(usuario))
+                .isInstanceOf(EmailYaRegistradoException.class);
+
+        verifyNoInteractions(passwordEncoder);
     }
 }

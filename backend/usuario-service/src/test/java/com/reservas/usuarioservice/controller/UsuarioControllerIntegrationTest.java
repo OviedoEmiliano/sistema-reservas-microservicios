@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -36,6 +37,9 @@ class UsuarioControllerIntegrationTest {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private static final String USUARIO_VALIDO = """
             {
@@ -248,5 +252,19 @@ class UsuarioControllerIntegrationTest {
                 .andExpect(status().isConflict());
 
         assertThat(usuarioRepository.count()).isEqualTo(1);
+    }
+
+
+    @Test
+    void crearUsuario_guardaElPasswordHasheadoEnLaBase() throws Exception {
+        mockMvc.perform(post("/api/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(USUARIO_VALIDO))
+                .andExpect(status().isCreated());
+
+        Usuario enBase = usuarioRepository.findByEmail("juan.perez@test.com").orElseThrow();
+        assertThat(enBase.getPassword()).isNotEqualTo("password123");
+        assertThat(enBase.getPassword()).startsWith("$2");
+        assertThat(passwordEncoder.matches("password123", enBase.getPassword())).isTrue();
     }
 }

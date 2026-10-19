@@ -15,7 +15,6 @@ Proyecto backend de práctica orientado a portfolio, construido con Spring Boot 
 | `api-gateway` | 🚧 Scaffolding inicial | Punto de entrada único, ruteo hacia los microservicios |
 | `frontend` (React) | ⏳ Pendiente | Se desarrollará una vez completo el backend |
 
-> ⚠️ **Seguridad pendiente:** por ahora las contraseñas de `usuario-service` se guardan en texto plano. La encriptación (BCrypt) y la autenticación con JWT se resolverán junto con el API Gateway. No usar con datos reales.
 
 ## Arquitectura
 
@@ -104,8 +103,8 @@ Detalle completo (DTOs, validaciones, errores) en el [README de `usuario-service
 
 - [x] Tests unitarios de `usuario-service` (JUnit + Mockito)
 - [x] Integración continua con GitHub Actions
-- [ ] Tests de integración (`@SpringBootTest` + `MockMvc` + Testcontainers)
-- [ ] Encriptación de contraseñas con BCrypt
+- [x] Tests de integración (`@SpringBootTest` + `MockMvc` + Testcontainers)
+- [x] Encriptación de contraseñas con BCrypt
 - [ ] Desarrollo completo de `turno-service`
 - [ ] Configuración del `api-gateway` con ruteo hacia ambos servicios
 - [ ] Autenticación y autorización con JWT, validado en el Gateway y en cada servicio

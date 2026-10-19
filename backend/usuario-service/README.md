@@ -141,7 +141,7 @@ Manejado centralizadamente en `GlobalExceptionHandler` vía `@RestControllerAdvi
 
 ## Próximos pasos para este servicio
 
-- [ ] Encriptar `password` con BCrypt (`PasswordEncoder`), en conjunto con el diseño de autenticación vía API Gateway + JWT
+- [x] Encriptar `password` con BCrypt (`PasswordEncoder`), en conjunto con el diseño de autenticación vía API Gateway + JWT
 - [x] Tests unitarios del `UsuarioService` (Mockito)
 - [x] Integración continua con GitHub Actions
 - [ ] Tests de integración del controller (`@SpringBootTest` + MockMvc + Testcontainers)

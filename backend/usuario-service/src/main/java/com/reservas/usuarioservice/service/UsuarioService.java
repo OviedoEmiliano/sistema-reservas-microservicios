@@ -23,6 +23,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
+    private static final String CONSTRAINT_EMAIL_UNICO = "uk_usuarios_email";
 
     @Transactional
     public Usuario registrarUsuario(Usuario usuario) {
@@ -34,9 +35,13 @@ public class UsuarioService {
         try {
             return usuarioRepository.save(usuario);
         } catch (DataIntegrityViolationException ex) {
-            throw new EmailYaRegistradoException(usuario.getEmail());
+            if (esViolacionDeEmailUnico(ex)) {
+                throw new EmailYaRegistradoException(usuario.getEmail());
+            }
+            throw ex;
         }
     }
+
 
     @Transactional(readOnly = true)
     public Usuario buscarPorId(Long id) {
@@ -78,5 +83,10 @@ public class UsuarioService {
     private Usuario obtenerUsuarioOrThrow(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new UsuarioNoEncontradoException(id));
+    }
+
+    private boolean esViolacionDeEmailUnico(DataIntegrityViolationException ex) {
+        String mensaje = ex.getMostSpecificCause().getMessage();
+        return mensaje != null && mensaje.contains(CONSTRAINT_EMAIL_UNICO);
     }
 }

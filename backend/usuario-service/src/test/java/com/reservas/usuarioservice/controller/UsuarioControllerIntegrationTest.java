@@ -267,4 +267,13 @@ class UsuarioControllerIntegrationTest {
         assertThat(enBase.getPassword()).startsWith("$2");
         assertThat(passwordEncoder.matches("password123", enBase.getPassword())).isTrue();
     }
+
+    @Test
+    void listarUsuarios_ordenandoPorCampoNoPermitido_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/usuarios").param("sort", "password"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/usuarios").param("sort", "foo"))
+                .andExpect(status().isBadRequest());
+    }
 }

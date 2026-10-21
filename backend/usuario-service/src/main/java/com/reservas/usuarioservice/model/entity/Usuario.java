@@ -45,6 +45,7 @@ public class Usuario {
     private LocalDateTime fechaCreacion;
 
     @UpdateTimestamp
+    @Column(nullable = false)
     private LocalDateTime fechaActualizacion;
 
     @Override

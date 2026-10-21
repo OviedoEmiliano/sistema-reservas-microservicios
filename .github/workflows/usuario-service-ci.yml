@@ -2,12 +2,16 @@ name: usuario-service CI
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'backend/usuario-service/**'
       - '.github/workflows/usuario-service-ci.yml'
+
   pull_request:
     paths:
       - 'backend/usuario-service/**'
+      - '.github/workflows/usuario-service-ci.yml'
 
 jobs:
   test:

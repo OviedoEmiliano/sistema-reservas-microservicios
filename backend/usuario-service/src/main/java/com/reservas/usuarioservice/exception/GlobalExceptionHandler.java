@@ -64,6 +64,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, problema, headers, status, request);
     }
 
+    @ExceptionHandler(CampoOrdenInvalidoException.class)
+    public ProblemDetail handleCampoOrdenInvalido(CampoOrdenInvalidoException ex) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problema.setTitle("Parámetro de orden inválido");
+        return problema;
+    }
+
     // ---------- Catch-all: último recurso ----------
 
     @ExceptionHandler(Exception.class)

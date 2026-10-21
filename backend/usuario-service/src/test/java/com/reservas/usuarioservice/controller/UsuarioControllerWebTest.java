@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -195,5 +196,30 @@ class UsuarioControllerWebTest {
                                 + "\"nroCelular\": \"1122334455\" }"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errores.passwordDentroDelLimite").isArray());
+    }
+
+    @Test
+    void listarUsuarios_ordenandoPorCampoInexistente_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/usuarios").param("sort", "foo"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Parámetro de orden inválido"));
+
+        verifyNoInteractions(usuarioService);
+    }
+
+    @Test
+    void listarUsuarios_ordenandoPorPassword_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/usuarios").param("sort", "password"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(usuarioService);
+    }
+
+    @Test
+    void listarUsuarios_ordenandoPorCampoPermitido_devuelve200() throws Exception {
+        when(usuarioService.obtenerTodos(any())).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/usuarios").param("sort", "nombre,desc"))
+                .andExpect(status().isOk());
     }
 }

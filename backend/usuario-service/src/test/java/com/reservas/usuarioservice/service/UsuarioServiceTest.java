@@ -181,12 +181,24 @@ class UsuarioServiceTest {
     @Test
     void registrarUsuario_siLaBdRechazaElEmailPorConcurrencia_lanzaEmailYaRegistrado() {
         when(usuarioRepository.existsByEmail(usuario.getEmail())).thenReturn(false);
-        when(usuarioRepository.save(usuario))
-                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(usuarioRepository.save(usuario)).thenThrow(new DataIntegrityViolationException(
+                "no se pudo insertar",
+                new RuntimeException("duplicate key value violates unique constraint \"uk_usuarios_email\"")));
 
         assertThatThrownBy(() -> usuarioService.registrarUsuario(usuario))
                 .isInstanceOf(EmailYaRegistradoException.class)
                 .hasMessageContaining(usuario.getEmail());
+    }
+
+    @Test
+    void registrarUsuario_siFallaOtroConstraint_propagaLaExcepcionOriginal() {
+        when(usuarioRepository.existsByEmail(usuario.getEmail())).thenReturn(false);
+        when(usuarioRepository.save(usuario)).thenThrow(new DataIntegrityViolationException(
+                "no se pudo insertar",
+                new RuntimeException("new row violates check constraint \"ck_usuarios_rol\"")));
+
+        assertThatThrownBy(() -> usuarioService.registrarUsuario(usuario))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
     @Test
     void registrarUsuario_guardaElPasswordHasheado() {

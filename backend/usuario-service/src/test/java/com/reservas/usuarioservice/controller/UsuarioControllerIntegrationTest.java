@@ -276,4 +276,18 @@ class UsuarioControllerIntegrationTest {
         mockMvc.perform(get("/api/usuarios").param("sort", "foo"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void actualizarUsuario_conIdInexistente_devuelve404() throws Exception {
+        mockMvc.perform(put("/api/usuarios/{id}", 99999)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                        {
+                          "nombre": "Juan Carlos",
+                          "apellido": "Perez",
+                          "nroCelular": "1199887766"
+                        }
+                        """))
+                .andExpect(status().isNotFound());
+    }
 }

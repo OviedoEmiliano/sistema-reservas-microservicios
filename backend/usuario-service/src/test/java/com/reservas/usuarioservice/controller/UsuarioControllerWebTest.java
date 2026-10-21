@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UsuarioController.class)
@@ -221,5 +222,22 @@ class UsuarioControllerWebTest {
 
         mockMvc.perform(get("/api/usuarios").param("sort", "nombre,desc"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void actualizarUsuario_conCelularInvalido_devuelve400() throws Exception {
+        mockMvc.perform(put("/api/usuarios/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                        {
+                          "nombre": "Juan",
+                          "apellido": "Perez",
+                          "nroCelular": "abc-invalido"
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.nroCelular").isArray());
+
+        verifyNoInteractions(usuarioService);
     }
 }

@@ -22,6 +22,7 @@ Microservicio de gestión de usuarios del sistema de Reservas. Implementa el CRU
 * **Manejo de errores:** `@RestControllerAdvice` con respuestas `ProblemDetail` (RFC 9457, que reemplaza a la RFC 7807)
 * **Testing:** JUnit 5, Mockito, AssertJ, MockMvc y Testcontainers (PostgreSQL 16 Alpine)
 * **CI/CD:** GitHub Actions
+* **Migraciones:** Flyway (SQL versionado), con Hibernate en modo \validate``
 
 ## Configuración
 
@@ -33,8 +34,9 @@ spring.datasource.username=postgres
 spring.datasource.password=${DB_PASSWORD}
 ```
 
-Requiere la variable de entorno `DB_PASSWORD` seteada con la contraseña real de tu instancia de PostgreSQL. La base `reservas_usuarios_db` debe existir; las tablas se crean/actualizan automáticamente (`spring.jpa.hibernate.ddl-auto=update`).
-
+Requiere la variable de entorno `DB_PASSWORD` seteada con la contraseña real de tu instancia de PostgreSQL. 
+La base reservas_usuarios_db debe existir y estar vacía; las tablas las crea Flyway al arrancar. 
+Hibernate solo valida el esquema (spring.jpa.hibernate.ddl-auto=validate).
 ### Puerto
 
 El servicio corre por defecto en `8081`.
@@ -55,6 +57,16 @@ Con el microservicio levantado, la especificación OpenAPI y la interfaz de prue
 
 Permite visualizar esquemas y restricciones de validación, y ejecutar peticiones directamente contra el servidor local.
 
+## Migraciones de base de datos (Flyway)
+
+Los scripts están en `src/main/resources/db/migration` y se aplican en orden al arrancar la aplicación, antes de que Hibernate valide el esquema.
+
+* Nombre: `V<versión>__<descripción>.sql` (dos guiones bajos).
+* **Una migración ya aplicada no se edita:** Flyway guarda su checksum y la aplicación se niega a arrancar si cambia. Los cambios se hacen con una migración nueva.
+* Cada cambio en una entidad exige su migración; si falta, `ddl-auto=validate` impide que la aplicación arranque.
+* El constraint de email único se llama `uk_usuarios_email`, y el service lo usa para distinguir un email duplicado de otras violaciones de integridad.
+* `ck_usuarios_rol` restringe el rol en la base: si se agrega un valor al enum `Rol`, hace falta una migración que actualice ese `CHECK`.
+
 ## Tests
 
 ```bash
@@ -73,17 +85,17 @@ cd backend/usuario-service
 
 ### Entidad `Usuario`
 
-| Campo                | Tipo            | Restricciones                                                                      |
-|----------------------|-----------------|------------------------------------------------------------------------------------|
-| `id`                 | `Long`          | Clave primaria, autoincremental (IDENTITY)                                         |
-| `nombre`             | `String`        | Not Null, longitud máxima 50                                                       |
-| `apellido`           | `String`        | Not Null, longitud máxima 50                                                       |
-| `email`              | `String`        | Not Null, único, normalizado a minúsculas, longitud máxima 100                     |
-| `password`           | `String`        | Not Null, hasheado con BCrypt (la entrada admite entre 8 caracteres y 72 bytes)    |
-| `nroCelular`         | `String`        | Not Null, solo dígitos (entre 8 y 15 caracteres), columna máx. 20                  |
-| `rol`                | `Rol` (enum)    | Not Null, persistido como STRING (`ROLE_CLIENTE`, `ROLE_ADMIN`), por defecto `ROLE_CLIENTE` |
-| `fechaCreacion`      | `LocalDateTime` | `@CreationTimestamp`, inmutable (`updatable = false`)                              |
-| `fechaActualizacion` | `LocalDateTime` | `@UpdateTimestamp`                                                                 |
+| Campo                | Tipo            | Restricciones                                                                                                            |
+|----------------------|-----------------|--------------------------------------------------------------------------------------------------------------------------|
+| `id`                 | `Long`          | Clave primaria, autoincremental (IDENTITY)                                                                               |
+| `nombre`             | `String`        | Not Null, longitud máxima 50                                                                                             |
+| `apellido`           | `String`        | Not Null, longitud máxima 50                                                                                             |
+| `email`              | `String`        | Not Null, único, normalizado a minúsculas, longitud máxima 100, constraint: uk_usuarios_email                            |
+| `password`           | `String`        | Not Null, hasheado con BCrypt (la entrada admite entre 8 caracteres y 72 bytes)                                          |
+| `nroCelular`         | `String`        | Not Null, solo dígitos (entre 8 y 15 caracteres), columna máx. 20                                                        |
+| `rol`                | `Rol` (enum)    | Not Null, persistido como STRING (`ROLE_CLIENTE`, `ROLE_ADMIN`), por defecto `ROLE_CLIENTE`, constraint: ck_usuarios_rol |
+| `fechaCreacion`      | `LocalDateTime` | `@CreationTimestamp`, inmutable (`updatable = false`)                                                                    |
+| `fechaActualizacion` | `LocalDateTime` | `@UpdateTimestamp`                                                                                                       |
 
 ### Enum `Rol`
 
@@ -173,7 +185,7 @@ El handler extiende `ResponseEntityExceptionHandler` para respetar el código co
 
 * **Contraseñas con BCrypt:** se inyecta la interfaz `PasswordEncoder` (implementada con `BCryptPasswordEncoder`), así el algoritmo se decide en un solo lugar. La contraseña se valida en longitud (BCrypt solo admite hasta 72 bytes, por lo que el límite se controla en bytes y no en caracteres) y se hashea antes de persistir, después de comprobar que el email no esté duplicado.
 * **Email normalizado:** se aplica `trim` y minúsculas antes de consultar duplicados y guardar, para que `Juan@x.com` y `juan@x.com` no sean usuarios distintos.
-* **Unicidad bajo concurrencia:** `existsByEmail` más `save` no es atómico, por lo que dos registros simultáneos con el mismo email podían pasar el chequeo. La garantía real es el índice único de la base; el service traduce su violación (`DataIntegrityViolationException`) a `EmailYaRegistradoException`, que responde `409`.
+* **Unicidad bajo concurrencia: ahora el service comprueba el nombre del constraint (uk_usuarios_email) y las demás violaciones de integridad se propagan como error 500 en vez de disfrazarse de 409
 * **DTOs separados por operación** (`UsuarioRequestDTO`, `UsuarioResponseDTO`, `UsuarioUpdateDTO`, `UsuarioPatchDTO`): evita exponer campos sensibles y previene sobreescrituras accidentales de `email`, `password` o `rol`.
 * **PUT vs. PATCH:** `PUT` exige todos los campos editables; `PATCH` permite actualización parcial ignorando nulos en el mapeo (`@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)` en MapStruct) y rechaza valores vacíos o en blanco en los campos informados.
 * **Orden restringido por lista blanca:** el parámetro `sort` solo acepta los campos de `CAMPOS_ORDENABLES`. Evita un `500` ante campos inexistentes y que se pueda ordenar por campos sensibles como `password`, cuyo orden filtraría información sobre el hash.
@@ -189,6 +201,6 @@ El handler extiende `ResponseEntityExceptionHandler` para respetar el código co
 - [x] Tests de capa web (`@WebMvcTest`) y de integración con Testcontainers
 - [x] Documentación interactiva con `springdoc-openapi` (Swagger UI)
 - [x] Tests de casos borde de `PUT` y `PATCH` (celular inválido y usuario inexistente)
-- [ ] Migraciones de base de datos con Flyway (y constraint único con nombre explícito)
+- [x] Migraciones de base de datos con Flyway (y constraint único con nombre explícito)
 - [ ] Reporte de cobertura con JaCoCo
 - [ ] Autenticación y emisión de JWT (junto con el API Gateway)

@@ -37,6 +37,7 @@ Cada microservicio tiene su propia base de datos PostgreSQL, siguiendo el patró
 - **Testing:** JUnit 5, Mockito, AssertJ, MockMvc (`@WebMvcTest`) y Testcontainers
 - **CI:** GitHub Actions
 - **Maven** como gestor de dependencias y build
+- **Flyway** — migraciones versionadas de base de datos (por ahora en usuario-service)
 
 ## Estructura del repositorio
 
@@ -70,7 +71,8 @@ Cada servicio espera su propia base ya creada en PostgreSQL:
 | `usuario-service` | `reservas_usuarios_db` |
 | `turno-service` | `reservas_turnos_db` |
 
-Hibernate se encarga de crear/actualizar las tablas automáticamente (`ddl-auto=update`).
+En `usuario-service` el esquema lo crea Flyway al arrancar (migraciones en `src/main/resources/db/migration`) y Hibernate solo lo valida (`ddl-auto=validate`). 
+`turno-service` sigue usando `ddl-auto=update` hasta incorporar Flyway.
 
 ### Levantar un servicio
 
@@ -118,10 +120,11 @@ Detalle completo (DTOs, validaciones, errores y decisiones de diseño) en el [RE
 - [x] Tests de capa web (`@WebMvcTest`)
 - [x] Encriptación de contraseñas con BCrypt
 - [x] Documentación interactiva con Swagger UI
+- [x] Migraciones de base de datos con Flyway en usuario-service
 - [ ] Desarrollo completo de `turno-service`
+- [ ] Flyway en turno-service, desde su primera tabla
 - [ ] Configuración del `api-gateway` con ruteo hacia ambos servicios
 - [ ] Autenticación y autorización con JWT, validado en el Gateway y en cada servicio
-- [ ] Migraciones de base de datos con Flyway
 - [ ] Reporte de cobertura con JaCoCo
 - [ ] Frontend en React consumiendo la API
 
